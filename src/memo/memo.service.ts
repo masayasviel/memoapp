@@ -54,7 +54,7 @@ export class MemoService {
   }
 
   async edit(userId: number, memoId: number, updateCatDto: UpdateMemoDto) {
-    await this.detail(userId, memoId);
+    await this.exists(userId, memoId);
     await this.db
       .update(Memo)
       .set({ title: updateCatDto.title, content: updateCatDto.content })
@@ -62,9 +62,20 @@ export class MemoService {
   }
 
   async delete_(userId: number, memoId: number) {
-    await this.detail(userId, memoId);
+    await this.exists(userId, memoId);
     await this.db
       .delete(Memo)
       .where(and(eq(Memo.id, memoId), eq(Memo.userId, userId)));
+  }
+
+  private async exists(userId: number, memoId: number) {
+    const res = await this.db
+      .select()
+      .from(Memo)
+      .where(and(eq(Memo.id, memoId), eq(Memo.userId, userId)));
+    if (res.length === 0) {
+      throw new NotFoundException();
+    }
+    return res[0];
   }
 }
