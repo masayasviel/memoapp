@@ -6,7 +6,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 
 import { type DB, InjectDb } from '@/db/db';
-import { Memo } from '@/db/schema';
+import { Memo, memoTagRelation, Tag } from '@/db/schema';
 
 import { CreateMemoDto, UpdateMemoDto } from './memo.zod';
 
@@ -26,14 +26,44 @@ export class MemoService {
   }
 
   async detail(userId: number, memoId: number) {
-    const res = await this.db
-      .select()
+    const rows = await this.db
+      .select({
+        id: Memo.id,
+        userId: Memo.userId,
+        title: Memo.title,
+        content: Memo.content,
+        createdAt: Memo.createdAt,
+        updatedAt: Memo.updatedAt,
+        tagId: Tag.id,
+        tagName: Tag.name,
+        tagIsOfficial: Tag.isOfficial,
+      })
       .from(Memo)
+      .leftJoin(memoTagRelation, eq(memoTagRelation.memoId, Memo.id))
+      .leftJoin(Tag, eq(memoTagRelation.tagId, Tag.id))
       .where(and(eq(Memo.id, memoId), eq(Memo.userId, userId)));
-    if (res.length === 0) {
+
+    if (rows.length === 0) {
       throw new NotFoundException();
     }
-    return res[0];
+
+    const base = rows[0];
+    const tags = rows
+      .filter((r) => r.tagId != null)
+      .map((r) => ({
+        id: r.tagId as number,
+        name: r.tagName as string,
+        isOfficial: r.tagIsOfficial as boolean,
+      }));
+
+    return {
+      id: base.id,
+      title: base.title,
+      content: base.content,
+      createdAt: base.createdAt,
+      updatedAt: base.updatedAt,
+      tags,
+    };
   }
 
   async register(userId: number, createCatDto: CreateMemoDto) {
