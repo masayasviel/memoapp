@@ -29,14 +29,15 @@ export class MemoService {
     const rows = await this.db
       .select({
         id: Memo.id,
-        userId: Memo.userId,
         title: Memo.title,
         content: Memo.content,
         createdAt: Memo.createdAt,
         updatedAt: Memo.updatedAt,
-        tagId: Tag.id,
-        tagName: Tag.name,
-        tagIsOfficial: Tag.isOfficial,
+        tag: {
+          id: Tag.id,
+          name: Tag.name,
+          isOfficial: Tag.isOfficial,
+        },
       })
       .from(Memo)
       .leftJoin(memoTagRelation, eq(memoTagRelation.memoId, Memo.id))
@@ -47,14 +48,17 @@ export class MemoService {
       throw new NotFoundException();
     }
 
+    type Row = (typeof rows)[number];
     const base = rows[0];
     const tags = rows
-      .filter((r) => r.tagId != null)
-      .map((r) => ({
-        id: r.tagId as number,
-        name: r.tagName as string,
-        isOfficial: r.tagIsOfficial as boolean,
-      }));
+      .filter(
+        (
+          r: Row,
+        ): r is Row & {
+          tag: { id: number; name: string; isOfficial: boolean };
+        } => r.tag?.id != null,
+      )
+      .map((r) => r.tag);
 
     return {
       id: base.id,
