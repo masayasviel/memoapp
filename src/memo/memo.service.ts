@@ -15,7 +15,14 @@ export class MemoService {
   constructor(@InjectDb() private readonly db: DB) {}
 
   list(userId: number) {
-    return this.db.select().from(Memo).where(eq(Memo.userId, userId));
+    return this.db
+      .select({
+        title: Memo.title,
+        createdAt: Memo.createdAt,
+        updatedAt: Memo.updatedAt,
+      })
+      .from(Memo)
+      .where(eq(Memo.userId, userId));
   }
 
   async detail(userId: number, memoId: number) {
